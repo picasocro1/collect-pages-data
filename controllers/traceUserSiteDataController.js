@@ -156,3 +156,68 @@ exports.visitorChange = async(req, res) => {
 
   res.json(results);
 };
+
+function intersectArrays(a, b) {
+  let sorted_a = a.sort();
+  let sorted_b = b.sort();
+  let common = [];
+  let a_i = 0;
+  let b_i = 0;
+
+  while (a_i < a.length && b_i < b.length) {
+    if (sorted_a[a_i] === sorted_b[b_i]) {
+      common.push(sorted_a[a_i]);
+      a_i++;
+      b_i++;
+    } else if (sorted_a[a_i] < sorted_b[b_i]) {
+      a_i++;
+    } else {
+      b_i++;
+    }
+  }
+  return common;
+}
+
+exports.compareTwoVisitors = async(req, res) => {
+  const id1 = req.params.first_visitor_id, id2 = req.params.second_visitor_id;
+
+  log(`compareTwoVisitors: ${id1} vs. ${id2}`);
+
+  try {
+    const v1 = await TraceUserSiteVisitor.findById(id1);
+    const v2 = await TraceUserSiteVisitor.findById(id2);
+
+    const fv1 = await TraceUserSiteVisitor.findFirstVisit(id1);
+    const fv2 = await TraceUserSiteVisitor.findFirstVisit(id2);
+
+    let intersect = intersectArrays(fv1.visitorData.client.fonts, fv2.visitorData.client.fonts);
+
+    const comparision = await TraceUserSiteVisit.compareVisitorsData(v1,  v2, fv1, fv2);
+
+    if (comparision == true) {
+      log('Visitors are equal');
+    } else {
+      log('Visitors are not equal');
+    }
+
+    res.json({
+      result: 'success',
+      data: {
+        visitor1: {
+          _id: v1._id,
+          name: v1.name,
+          visitorData: fv1.visitorData
+        },
+        visitor2: {
+          _id: v2._id,
+          name: v2.name,
+          visitorData: fv2.visitorData
+        },
+        fontsSimilarityPercent: intersect.length / Math.min(fv1.visitorData.client.fonts.length, fv2.visitorData.client.fonts.length) * 100,
+        comparision: comparision
+      }
+    });
+  } catch (err) {
+    res.json({ result: 'failure', error: err });
+  }
+};

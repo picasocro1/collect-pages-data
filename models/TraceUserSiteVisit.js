@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 mongoose.Promise = global.Promise;
-const minAgreementPercent = 80;
-const minPrecisedAgreementPercent = 95;
+const minAgreementPercent = 75;
+const minPrecisedAgreementPercent = 97;
 const log = require('../handlers/log');
 
 const TraceUserSiteVisit = new mongoose.Schema({
@@ -228,6 +228,8 @@ TraceUserSiteVisit.statics.findVisitorId = async function(visitorData) {
             visit = undefined;
           }
         }
+      } else {
+        visit = undefined;
       }
 
       log('4. visit: ', visit);
@@ -237,6 +239,183 @@ TraceUserSiteVisit.statics.findVisitorId = async function(visitorData) {
       }
     }
   }
+};
+
+TraceUserSiteVisit.statics.compareVisitorsData = async function(v1, v2, fv1, fv2) {
+  let visit;
+
+  const visitor1Data = fv1.visitorData;
+  const visitor2Data = fv2.visitorData;
+
+  //1. Find by fingerprints
+  if (visitor1Data.client && visitor2Data.client) {
+    if (visitor1Data.client.fingerprints && visitor2Data.client.fingerprints) {
+      visit = await this.findOne({ 'visitor': v1._id, 'visitorData.client.fingerprints.height': visitor2Data.client.fingerprints.height }).sort({ created: 1 }).exec();
+      log('1.1 visit: ', visit);
+
+      if (!visit) {
+        visit = await this.findOne({ 'visitor': v2._id, 'visitorData.client.fingerprints.height': visitor1Data.client.fingerprints.height }).sort({ created: 1 }).exec();
+        log('1.2 visit: ', visit);
+      }
+
+      if (!visit) {
+        visit = await this.findOne({ 'visitor': v1._id, 'visitorData.client.fingerprints.medium': visitor2Data.client.fingerprints.medium }).sort({ created: 1 }).exec();
+        log('2.1 visit: ', visit);
+
+        if (!visit) {
+          visit = await this.findOne({ 'visitor': v2._id, 'visitorData.client.fingerprints.medium': visitor1Data.client.fingerprints.medium }).sort({ created: 1 }).exec();
+          log('2.2 visit: ', visit);
+        }
+      }
+
+      if (!visit) {
+        visit = await this.findOne({ 'visitor': v1._id, 'visitorData.client.fingerprints.medium': visitor2Data.client.fingerprints.medium }).sort({ created: 1 }).exec();
+        log('3.1 visit: ', visit);
+
+        if (!visit) {
+          visit = await this.findOne({ 'visitor': v2._id, 'visitorData.client.fingerprints.medium': visitor1Data.client.fingerprints.medium }).sort({ created: 1 }).exec();
+          log('3.2 visit: ', visit);
+        }
+      }
+
+      if (visit) {
+        return true;
+      }
+    }
+  }
+
+  //2. Find by system, device & fonts combination
+  if (visitor1Data.client && visitor2Data.client) {
+    if (visitor1Data.client.fonts && visitor2Data.client.fonts) {
+      let visitorMatchFilter = {
+        'visitor': v1._id
+      };
+
+      let systemMatchFilter = {
+        'visitorData.client.system.CPU': visitor2Data.client.system.CPU,
+        'visitorData.client.system.OS': visitor2Data.client.system.OS,
+        'visitorData.client.system.OSVersion': visitor2Data.client.system.OSVersion,
+      };
+
+      let deviceMatchFilter = {};
+      if (visitor2Data.client.system.device) {
+        systemMatchFilter['visitorData.client.device.device'] = visitor2Data.client.device.device;
+        systemMatchFilter['visitorData.client.device.deviceType'] = visitor2Data.client.device.type;
+        systemMatchFilter['visitorData.client.device.deviceVendor'] = visitor2Data.client.device.vendor;
+      }
+
+      let minMatchNumber = Math.floor(visitor2Data.client.fonts.length * minAgreementPercent / 100);
+
+      log('• minMatchNumber: ' + minMatchNumber);
+
+      visit = await this.aggregate([
+        { $match: { $text: { $search: visitor2Data.client.fonts.join(' ') } } },
+        { $match: visitorMatchFilter },
+        { $match: systemMatchFilter },
+        { $match: deviceMatchFilter },
+        { $addFields: { score: { $meta: "textScore" } } },
+        { $match: { score: { $gte: minMatchNumber } } }, //limit query
+        { $sort: { score: -1 } },
+        { $limit: 1 }
+      ]);
+
+      if (visit && visit.length > 0) {
+        visit = visit[0];
+
+        log('• Agreement percent: ' + Math.min(visitor2Data.client.fonts.length, visit.visitorData.client.fonts.length) / Math.max(visitor2Data.client.fonts.length,
+            visit.visitorData.client.fonts.length) * 100);
+
+        if (Math.min(visitor2Data.client.fonts.length, visit.visitorData.client.fonts.length) / Math.max(visitor2Data.client.fonts.length,
+            visit.visitorData.client.fonts.length) * 100 < minAgreementPercent) {
+          visit = undefined;
+        }
+
+        if (visit) {
+          //check precised score
+          let minPrecisedMatchNumber = Math.floor(Math.min(visitor2Data.client.fonts.length, visit.visitorData.client.fonts.length) * minPrecisedAgreementPercent / 100);
+
+          log('• minPrecisedMatchNumber: ' + minPrecisedMatchNumber);
+          log('• visit.score: ' + visit.score);
+
+          if (visit.score < minPrecisedMatchNumber) {
+            visit = undefined;
+          }
+        }
+      } else {
+        visit = undefined;
+      }
+
+      log('4.1 visit: ', visit);
+
+      if (!visit) {
+        let visitorMatchFilter = {
+          'visitor': v2._id
+        };
+
+        let systemMatchFilter = {
+          'visitorData.client.system.CPU': visitor1Data.client.system.CPU,
+          'visitorData.client.system.OS': visitor1Data.client.system.OS,
+          'visitorData.client.system.OSVersion': visitor1Data.client.system.OSVersion,
+        };
+
+        let deviceMatchFilter = {};
+        if (visitor1Data.client.system.device) {
+          systemMatchFilter['visitorData.client.device.device'] = visitor1Data.client.device.device;
+          systemMatchFilter['visitorData.client.device.deviceType'] = visitor1Data.client.device.type;
+          systemMatchFilter['visitorData.client.device.deviceVendor'] = visitor1Data.client.device.vendor;
+        }
+
+        let minMatchNumber = Math.floor(visitor1Data.client.fonts.length * minAgreementPercent / 100);
+
+        log('• minMatchNumber: ' + minMatchNumber);
+
+        visit = await this.aggregate([
+          { $match: { $text: { $search: visitor1Data.client.fonts.join(' ') } } },
+          { $match: visitorMatchFilter },
+          { $match: systemMatchFilter },
+          { $match: deviceMatchFilter },
+          { $addFields: { score: { $meta: "textScore" } } },
+          { $match: { score: { $gte: minMatchNumber } } }, //limit query
+          { $sort: { score: -1 } },
+          { $limit: 1 }
+        ]);
+
+        if (visit && visit.length > 0) {
+          visit = visit[0];
+
+          log('• Agreement percent: ' + Math.min(visitor1Data.client.fonts.length, visit.visitorData.client.fonts.length) / Math.max(visitor1Data.client.fonts.length,
+              visit.visitorData.client.fonts.length) * 100);
+
+          if (Math.min(visitor1Data.client.fonts.length, visit.visitorData.client.fonts.length) / Math.max(visitor1Data.client.fonts.length,
+              visit.visitorData.client.fonts.length) * 100 < minAgreementPercent) {
+            visit = undefined;
+          }
+
+          if (visit) {
+            //check precised score
+            let minPrecisedMatchNumber = Math.floor(Math.min(visitor2Data.client.fonts.length, visit.visitorData.client.fonts.length) * minPrecisedAgreementPercent / 100);
+
+            log('• minPrecisedMatchNumber: ' + minPrecisedMatchNumber);
+            log('• visit.score: ' + visit.score);
+
+            if (visit.score < minPrecisedMatchNumber) {
+              visit = undefined;
+            }
+          }
+        } else {
+          visit = undefined;
+        }
+
+        log('4.2 visit: ', visit);
+      }
+
+      if (visit) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 };
 
 module.exports = mongoose.model('TraceUserSiteVisit', TraceUserSiteVisit);

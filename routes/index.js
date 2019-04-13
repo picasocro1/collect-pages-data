@@ -16,13 +16,15 @@ router.post('/data/memoryForSusan2Birthday', /*cors(), */susanDataController.mem
 router.options('/data/traceUserSite/*', cors()); //enabling CORS pre-flight
 
 /*router.post('/data/traceUserSite/forceCreatingNewVisitor', cors(), traceUserSiteDataController.createNewVisitor);
-router.post('/data/traceUserSite/checkVisitor', cors(), traceUserSiteDataController.checkVisitor);
+ router.post('/data/traceUserSite/checkVisitor', cors(), traceUserSiteDataController.checkVisitor);
 
-router.get('/data/traceUserSite/firstVisit/:visitor_id', cors(), traceUserSiteDataController.getFirstVisit);
-router.get('/data/traceUserSite/visits/:visitor_id', cors(), traceUserSiteDataController.getVisitorVisits);
-router.get('/data/traceUserSite/history/:visitor_id', cors(), traceUserSiteDataController.getVisitorHistory);*/
+ router.get('/data/traceUserSite/firstVisit/:visitor_id', cors(), traceUserSiteDataController.getFirstVisit);
+ router.get('/data/traceUserSite/visits/:visitor_id', cors(), traceUserSiteDataController.getVisitorVisits);
+ router.get('/data/traceUserSite/history/:visitor_id', cors(), traceUserSiteDataController.getVisitorHistory);*/
 
 router.post('/data/traceUserSite/registerVisit', cors(), traceUserSiteDataController.registerVisit);
 router.patch('/data/traceUserSite/visitor/:visitor_id', cors(), traceUserSiteDataController.visitorChange);
+
+router.get('/data/traceUSerSite/analytics/compareTwoVisitors/:first_visitor_id/:second_visitor_id', cors(), traceUserSiteDataController.compareTwoVisitors);
 
 module.exports = router;
