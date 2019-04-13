@@ -157,6 +157,27 @@ exports.visitorChange = async(req, res) => {
   res.json(results);
 };
 
+exports.visitorDelete = async(req, res) => {
+  log('visitorDelete: ' + req.params.visitor_id);
+
+  let results = {};
+
+  if (req.params.visitor_id === undefined) {
+    results = { result: 'failure', error: err };
+  } else {
+    try {
+      await TraceUserSiteVisit.find({'visitor': req.params.visitor_id}).remove().exec();
+      await TraceUserSiteVisitor.findById(req.params.visitor_id).remove().exec();
+
+      results.result = "success";
+    } catch (err) {
+      results = { result: 'failure', error: err };
+    }
+  }
+
+  res.json(results);
+};
+
 function intersectArrays(a, b) {
   let sorted_a = a.sort();
   let sorted_b = b.sort();

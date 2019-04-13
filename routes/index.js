@@ -24,6 +24,7 @@ router.options('/data/traceUserSite/*', cors()); //enabling CORS pre-flight
 
 router.post('/data/traceUserSite/registerVisit', cors(), traceUserSiteDataController.registerVisit);
 router.patch('/data/traceUserSite/visitor/:visitor_id', cors(), traceUserSiteDataController.visitorChange);
+router.delete('/data/traceUserSite/visitor/:visitor_id', cors(), traceUserSiteDataController.visitorDelete);
 
 router.get('/data/traceUSerSite/analytics/compareTwoVisitors/:first_visitor_id/:second_visitor_id', cors(), traceUserSiteDataController.compareTwoVisitors);
 
