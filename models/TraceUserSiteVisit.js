@@ -199,18 +199,25 @@ TraceUserSiteVisit.statics.findVisitorId = async function(visitorData) {
 
       let minMatchNumber = Math.floor(visitorData.client.fonts.length * minAgreementPercent / 100);
 
+      log('• minMatchNumber: ' + minMatchNumber);
+
       visit = await this.aggregate([
         { $match: { $text: { $search: visitorData.client.fonts.join(' ') } } },
         { $match: systemMatchFilter },
         { $match: deviceMatchFilter },
-        { $addFields: { score: { $meta: "textScore" } } },
+        { $addFields: { score: { $meta: "textScore" }, fontsSize: { $size: "$visitorData.client.fonts" } } },
         { $match: { score: { $gte: minMatchNumber } } }, //limit query
-        { $sort: { score: -1 } },
+        { $addFields: { percentScore: { $multiply: ["$score", { $divide: [1, "$fontsSize"] }, 100] } } },
+        { $sort: { percentScore: -1 } },
         { $limit: 1 }
       ]);
 
       if (visit && visit.length > 0) {
         visit = visit[0];
+
+        console.log('visit.fontsSize: ' + visit.fontsSize);
+        console.log('visit.test: ' + visit.test);
+        console.log('visit.percentScore: ' + visit.percentScore);
 
         if (Math.min(visitorData.client.fonts.length, visit.visitorData.client.fonts.length) / Math.max(visitorData.client.fonts.length,
             visit.visitorData.client.fonts.length) * 100 < minAgreementPercent) {
@@ -221,6 +228,8 @@ TraceUserSiteVisit.statics.findVisitorId = async function(visitorData) {
           //check precised score
           let minPrecisedMatchNumber = Math.floor(Math.min(visitorData.client.fonts.length, visit.visitorData.client.fonts.length) * minPrecisedAgreementPercent / 100);
 
+          log('• visit.visitorData.client.fonts.length: ' + visit.visitorData.client.fonts.length);
+          log('• visit_id: ' + visit._id);
           log('• minPrecisedMatchNumber: ' + minPrecisedMatchNumber);
           log('• visit.score: ' + visit.score);
 
@@ -313,9 +322,10 @@ TraceUserSiteVisit.statics.compareVisitorsData = async function(v1, v2, fv1, fv2
         { $match: visitorMatchFilter },
         { $match: systemMatchFilter },
         { $match: deviceMatchFilter },
-        { $addFields: { score: { $meta: "textScore" } } },
+        { $addFields: { score: { $meta: "textScore" }, fontsSize: { $size: "$visitorData.client.fonts" } } },
         { $match: { score: { $gte: minMatchNumber } } }, //limit query
-        { $sort: { score: -1 } },
+        { $addFields: { percentScore: { $multiply: ["$score", { $divide: [1, "$fontsSize"] }, 100] } } },
+        { $sort: { percentScore: -1 } },
         { $limit: 1 }
       ]);
 
@@ -370,13 +380,14 @@ TraceUserSiteVisit.statics.compareVisitorsData = async function(v1, v2, fv1, fv2
         log('• minMatchNumber: ' + minMatchNumber);
 
         visit = await this.aggregate([
-          { $match: { $text: { $search: visitor1Data.client.fonts.join(' ') } } },
+          { $match: { $text: { $search: visitor2Data.client.fonts.join(' ') } } },
           { $match: visitorMatchFilter },
           { $match: systemMatchFilter },
           { $match: deviceMatchFilter },
-          { $addFields: { score: { $meta: "textScore" } } },
+          { $addFields: { score: { $meta: "textScore" }, fontsSize: { $size: "$visitorData.client.fonts" } } },
           { $match: { score: { $gte: minMatchNumber } } }, //limit query
-          { $sort: { score: -1 } },
+          { $addFields: { percentScore: { $multiply: ["$score", { $divide: [1, "$fontsSize"] }, 100] } } },
+          { $sort: { percentScore: -1 } },
           { $limit: 1 }
         ]);
 
