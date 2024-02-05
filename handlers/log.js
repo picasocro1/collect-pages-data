@@ -1,5 +1,5 @@
-module.exports = function log(text) {
+module.exports = function log(...texts) {
   if (process.env.NODE_ENV === 'development') {
-    console.log(text)
+    console.log(...texts)
   }
 };

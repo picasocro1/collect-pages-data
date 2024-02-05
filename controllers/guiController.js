@@ -1,8 +1,11 @@
 const mongoose = require('mongoose');
+const log = require('../handlers/log')
 
 exports.homePage = (req, res) => {
-  let currentDate = new Date();
-  let dateTime = currentDate.getDate() + "/"
+  log('homePage')
+
+  const currentDate = new Date();
+  const dateTime = currentDate.getDate() + "/"
     + (currentDate.getMonth() + 1) + "/"
     + currentDate.getFullYear() + " @ "
     + currentDate.getHours() + ":"
