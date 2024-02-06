@@ -4,6 +4,8 @@ const milenaAndMatiGuestBookController = require('../controllers/milenaAndMati/G
 
 const majaAndMarcinPhotoMosaicController = require('../controllers/majaAndMarcin/PhotoMosaic')
 
+const kingaAndMateuszPhotosController = require('../controllers/kingaAndMateusz/Photos')
+
 const cors = require('cors');
 const corsOptionsForDocenZycie = process.env.NODE_ENV === 'development' ? { origin: /http:\/\/localhost.*/ } : { origin: /https?:\/\/docenzycie\.pl.*/ }
 
@@ -13,4 +15,6 @@ module.exports = (app) => {
     milenaAndMatiGuestBookController.postRecord('/data/milena-and-mati/guest-book/', () => cors(corsOptionsForDocenZycie), app)
 
     majaAndMarcinPhotoMosaicController('/data/maja-and-marcin/photo-mosaic/', () => cors(corsOptionsForDocenZycie), app)
+
+    kingaAndMateuszPhotosController('/data/kinga-and-mateusz/photos', () => cors(corsOptionsForDocenZycie), app)
 }
