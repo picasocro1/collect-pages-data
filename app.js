@@ -8,14 +8,6 @@ const path = require('path');
 const errorHandlers = require('./handlers/errorHandlers');
 const log = require('./handlers/log')
 
-if (process.env.NODE_ENV === undefined) {
-    process.env.NODE_ENV = "production";
-}
-
-console.log('--------------------------------------------');
-console.log(`→ App run in: ${process.env.NODE_ENV} mode.`);
-console.log('--------------------------------------------');
-
 // Make sure we are running node 7.6+
 const [major, minor] = process.versions.node.split('.').map(parseFloat);
 if (major < 7 || (major === 7 && minor <= 5)) {
@@ -25,6 +17,14 @@ if (major < 7 || (major === 7 && minor <= 5)) {
 
 // import environmental variables from our variables.env file
 require('dotenv').config({ path: 'variables.env' });
+
+if (process.env.NODE_ENV === undefined) {
+    process.env.NODE_ENV = "production";
+}
+
+console.log('--------------------------------------------');
+console.log(`→ App run in: ${process.env.NODE_ENV} mode.`);
+console.log('--------------------------------------------');
 
 // Connect to our Database and handle any bad connections
 mongoose.connect(process.env.DATABASE, { useNewUrlParser: true, useFindAndModify: false, useCreateIndex: true, useUnifiedTopology: true });
